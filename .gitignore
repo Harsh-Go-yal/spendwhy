@@ -1,0 +1,6 @@
+.env
+spendwhy.db*
+.secret.key
+uploads/
+__pycache__/
+.claude/

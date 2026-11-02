@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpendWhy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#08090b;--surface:#101216;--surface2:#16191f;--line:#22262e;--line2:#2e333d;
+  --text:#f1f3f5;--muted:#969ca8;--faint:#6b7280;
+  --lime:#c8f24a;--lime-ink:#141a03;
+  --amber:#ffb84d;--violet:#a98bff;--green:#4fd98a;--blue:#6bb1ff;--red:#ff7a8a;
+  --radius:16px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:400 15px/1.5 Inter,system-ui,sans-serif;font-feature-settings:"cv11","ss01";
+  background-image:radial-gradient(900px 420px at 85% -120px,rgba(200,242,74,.09),transparent 70%)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px 64px}
+
+header{display:flex;align-items:center;gap:12px;padding:20px 0;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.02em}
+.logo i{width:30px;height:30px;border-radius:9px;background:var(--lime);color:var(--lime-ink);display:grid;place-items:center;font-style:normal;font-weight:800;font-size:17px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;flex:1 1 auto;min-width:0}
+.hdr-actions{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+@media (max-width:980px){.chips{order:3;flex-basis:100%}}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:4px 11px;background:var(--surface)}
+.chip b{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.chip.ok b{background:var(--green)}.chip.warn b{background:var(--amber)}.chip.bad b{background:var(--red)}
+
+.btn{border:1px solid var(--line2);background:var(--surface2);border-radius:10px;padding:8px 14px;font-weight:600;font-size:13.5px;transition:background .15s,border-color .15s,transform .05s;white-space:nowrap}
+.btn:hover{background:#1e222a;border-color:#3b414d}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:var(--lime);color:var(--lime-ink);border-color:var(--lime)}
+.btn.primary:hover{background:#d6fb62}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--text);background:var(--surface2)}
+.btn.sm{padding:5px 10px;font-size:12.5px;border-radius:8px}
+
+h1{font-size:clamp(30px,5vw,46px);line-height:1.08;letter-spacing:-.035em;font-weight:800;margin:20px 0 8px}
+h1 em{font-style:normal;color:var(--lime)}
+.sub{color:var(--muted);margin:0 0 26px;max-width:600px;font-size:16px}
+
+.hero{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;min-height:196px;padding:24px;border:1.5px dashed var(--line2);border-radius:var(--radius);background:var(--surface);cursor:pointer;width:100%;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--lime);background:rgba(200,242,74,.05)}
+.drop svg{color:var(--lime);margin-bottom:6px}
+.drop strong{font-size:17px;letter-spacing:-.01em}
+.drop span{color:var(--muted);font-size:13.5px}
+.console{padding:18px;display:flex;flex-direction:column;gap:10px}
+.console h2{font-size:14px;margin:0;font-weight:600}
+.console p{margin:0;color:var(--faint);font-size:12.5px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0}
+.field input,.field select,.field textarea{background:var(--bg);border:1px solid var(--line2);border-radius:9px;padding:9px 11px;color:var(--text);font-size:14px;width:100%}
+.field textarea{resize:vertical;min-height:72px}
+.grid2{display:grid;grid-template-columns:96px 1fr;gap:8px}
+.console .row{display:flex;gap:8px;flex-wrap:wrap}
+.console .row .primary{flex:1}
+
+.billcard{margin-top:14px;padding:16px 18px;display:grid;grid-template-columns:1fr auto;gap:4px 18px;align-items:start;animation:rise .25s ease}
+.eyebrow{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.billcard .merchant{font-weight:700;font-size:16px;letter-spacing:-.01em}
+.billcard .total{font-size:22px;font-weight:800;letter-spacing:-.02em;text-align:right;grid-row:1 / span 2;grid-column:2}
+.billcard ul,.drawer ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.billcard li,.drawer li{font-size:12.5px;background:var(--surface2);border:1px solid var(--line);border-radius:7px;padding:2px 8px}
+.msg{grid-column:1 / -1;font-size:13.5px;margin-top:8px;color:var(--muted)}
+.msg.ok{color:var(--green)}.msg.no{color:var(--amber)}.msg.err{color:var(--red)}
+.tag{font-size:11px;color:var(--amber);border:1px solid rgba(255,184,77,.35);border-radius:6px;padding:0 6px;margin-left:6px;font-weight:500;vertical-align:1px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line2);border-top-color:var(--lime);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:8px}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:14px 0 32px}
+.stat{padding:16px 18px}
+.stat .label{font-size:13px;color:var(--muted);display:flex;gap:7px;align-items:center}
+.stat .value{font-size:clamp(22px,2.6vw,29px);font-weight:800;letter-spacing:-.03em;margin-top:2px}
+.stat .hint{font-size:12.5px;color:var(--faint)}
+.stat.regret .value{color:var(--red)}
+.meter{height:5px;border-radius:9px;background:var(--surface2);margin-top:8px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--red);border-radius:9px;transition:width .4s}
+
+.feedhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.feedhead h2{font-size:17px;letter-spacing:-.01em;margin:0}
+.feedhead span{font-size:12.5px;color:var(--faint)}
+.feed{display:flex;flex-direction:column;gap:8px}
+.txn{position:relative;overflow:hidden;display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:4px 14px;align-items:center;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;cursor:pointer;transition:border-color .15s,background .15s}
+.txn:hover{border-color:var(--line2);background:#13161b}
+.txn.urgent{border-color:rgba(255,184,77,.35)}
+.txn.muted{opacity:.62}
+.ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--surface2);color:var(--muted);grid-row:span 2}
+.ico.amber{background:rgba(255,184,77,.12);color:var(--amber)}.ico.violet{background:rgba(169,139,255,.14);color:var(--violet)}
+.ico.green{background:rgba(79,217,138,.12);color:var(--green)}.ico.blue{background:rgba(107,177,255,.13);color:var(--blue)}.ico.red{background:rgba(255,122,138,.12);color:var(--red)}
+.who{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.amt{font-weight:700;font-size:16.5px;letter-spacing:-.02em;text-align:right}
+.amt.credit{color:var(--green)}
+.meta{grid-column:2;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted);min-width:0}
+.meta .why{color:var(--text);opacity:.85}
+.when{grid-column:3;font-size:12px;color:var(--faint);text-align:right;white-space:nowrap}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;border-radius:99px;padding:2px 9px;white-space:nowrap;background:var(--surface2);color:var(--muted)}
+.pill.amber{background:rgba(255,184,77,.13);color:var(--amber)}.pill.violet{background:rgba(169,139,255,.16);color:var(--violet)}
+.pill.green{background:rgba(79,217,138,.13);color:var(--green)}.pill.blue{background:rgba(107,177,255,.14);color:var(--blue)}.pill.red{background:rgba(255,122,138,.13);color:var(--red)}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--violet);animation:pulse 1.3s ease-out infinite}
+.actions{grid-column:2 / -1;display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--surface2)}
+.bar i{display:block;height:100%;background:var(--amber);transition:width 1s linear}
+.empty{padding:44px 20px;text-align:center;color:var(--muted);border:1px dashed var(--line2);border-radius:14px}
+.empty strong{display:block;color:var(--text);font-size:16px;margin-bottom:4px}
+
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(480px,100vw);background:var(--surface);border-left:1px solid var(--line2);transform:translateX(102%);transition:transform .24s cubic-bezier(.2,.8,.2,1);z-index:21;overflow-y:auto;padding:20px 22px 40px}
+.drawer.on{transform:none}
+.drawer .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.drawer .big{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.drawer .to{font-size:16px;font-weight:600;margin:2px 0 8px;overflow-wrap:anywhere}
+.sect{margin-top:22px}
+.sect>.eyebrow{display:block;margin-bottom:8px}
+.reason{font-size:16px;font-weight:500;line-height:1.4;overflow-wrap:anywhere}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.bubbles{display:flex;flex-direction:column;gap:8px}
+.bubble{max-width:84%;padding:9px 13px;border-radius:15px;font-size:14px;line-height:1.42;overflow-wrap:anywhere}
+.bubble.agent{align-self:flex-start;background:var(--surface2);border-bottom-left-radius:5px}
+.bubble.user{align-self:flex-end;background:var(--lime);color:var(--lime-ink);font-weight:500;border-bottom-right-radius:5px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:12.5px/1.5 ui-monospace,Consolas,monospace;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;max-height:240px;overflow:auto}
+.form{display:flex;flex-direction:column;gap:10px}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.err{color:var(--red);font-size:13.5px;overflow-wrap:anywhere}
+
+#toasts{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:30;width:min(440px,calc(100vw - 32px))}
+.toast{background:#1d2027;border:1px solid var(--line2);padding:10px 14px;border-radius:11px;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.45);animation:rise .2s ease}
+.toast.bad{border-color:rgba(255,122,138,.5)}
+
+.gate{max-width:480px;margin:0 auto;padding:36px 24px 64px}
+.gate .logo{margin-bottom:24px}
+.gate h1{margin-top:0;font-size:34px}
+.gform{padding:18px;display:flex;flex-direction:column;gap:14px}
+.gform .field small{color:var(--faint);font-size:12px}
+.gform a{color:var(--lime)}
+.consent{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted);cursor:pointer}
+.consent input{margin-top:3px;accent-color:var(--lime);flex:none;width:16px;height:16px}
+.gnote{color:var(--faint);font-size:12.5px;margin:14px 0 0}
+[hidden]{display:none!important}
+
+@keyframes rise{from{opacity:0;transform:translateY(6px)}}
+@keyframes spin{to{transform:rotate(1turn)}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(169,139,255,.65)}100%{box-shadow:0 0 0 9px rgba(169,139,255,0)}}
+@media (max-width:860px){.hero{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.drop{min-height:150px}}
+@media (max-width:560px){
+  .wrap{padding:0 16px 48px}
+  .txn{grid-template-columns:38px minmax(0,1fr) auto;padding:12px}
+  .ico{width:38px;height:38px}
+  .actions{grid-column:1 / -1}
+  .when{display:none}
+  .drawer{padding:16px 16px 36px}
+  header .btn{flex:1}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<main class="gate" id="landing" hidden>
+  <div class="logo"><i>₹</i>SpendWhy</div>
+  <h1>Every rupee owes you <em>an explanation.</em></h1>
+  <p class="sub">Show the bill within 2 minutes, or your finance buddy calls to ask why.</p>
+  <form class="card gform" id="connectForm">
+    <label class="field">Your name<input id="cName" autocomplete="given-name" maxlength="80" required></label>
+    <label class="field">Gmail address<input id="cEmail" type="email" autocomplete="email" required></label>
+    <label class="field">Gmail app password<input id="cPass" type="password" autocomplete="off" placeholder="16 letters">
+      <small>Not your Google password. <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">Create one here</a> (needs 2-Step Verification). It lets SpendWhy read your email, so only use this on a server you trust. You can revoke it from Google any time.</small></label>
+    <label class="field">Phone, with country code<input id="cPhone" type="tel" autocomplete="tel" placeholder="+919876543210" required></label>
+    <label class="consent"><input type="checkbox" id="cConsent" required><span>I agree that SpendWhy may place automated AI calls to this number about my spending.</span></label>
+    <button class="btn primary" type="submit" id="cSubmit">Start tracking</button>
+  </form>
+  <p class="gnote">SpendWhy checks for bank alerts every minute and saves only those. Delete your data from the dashboard at any time.</p>
+</main>
+
+<div class="wrap" id="app" hidden>
+  <header>
+    <div class="logo"><i>₹</i>SpendWhy</div>
+    <div class="chips" id="chips"></div>
+    <div class="hdr-actions">
+      <button class="btn" id="syncBtn">Sync Gmail</button>
+      <button class="btn ghost" id="resetBtn">Reset</button>
+      <button class="btn ghost" data-act="logout">Sign out</button>
+      <button class="btn ghost" data-act="deleteme">Delete my data</button>
+    </div>
+  </header>
+
+  <h1>Every rupee owes you <em>an explanation.</em></h1>
+  <p class="sub" id="sub">Show the bill within 2 minutes, or your finance buddy calls to ask why.</p>
+
+  <section class="hero">
+    <div>
+      <button class="drop" id="drop" type="button">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h3"/></svg>
+        <strong>Drop a bill photo to skip the call</strong>
+        <span>JPG, PNG or PDF. Handwritten is fine. Click to browse.</span>
+      </button>
+      <input type="file" id="file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" hidden>
+      <div id="billSlot" aria-live="polite"></div>
+    </div>
+    <form class="card console" id="demoForm">
+      <h2>Fire a demo alert</h2>
+      <div class="grid2">
+        <label class="field">Amount (₹)<input id="demoAmt" class="num" type="number" min="1" step="1" value="450" required></label>
+        <label class="field">Merchant<input id="demoMerchant" value="Blue Tokai Coffee" maxlength="40" required></label>
+      </div>
+      <div class="row"><button class="btn primary" type="submit">Fire demo alert</button></div>
+      <p id="thresholdNote"></p>
+    </form>
+  </section>
+
+  <section class="stats" id="stats" aria-label="Summary"></section>
+
+  <div class="feedhead"><h2>Transactions</h2><span id="feedCount"></span></div>
+  <section class="feed" id="feed"></section>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Transaction details"></aside>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const inr = n => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2,minimumFractionDigits:0}).format(n||0);
+const when = ts => new Date(ts*1000).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',timeZone:'Asia/Kolkata'});
+const CATEGORIES = ['Food & Dining','Groceries','Shopping','Transport','Bills & Utilities','Entertainment','Health','Education','Transfers','Other'];
+
+const svg = p => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const ICON = {
+  receipt: svg('<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/>'),
+  phone: svg('<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"/>'),
+  clock: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  missed: svg('<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"/><path d="m16 3 5 5m0-5-5 5"/>'),
+  pen: svg('<path d="M4 20h4L19 9l-4-4L4 16z"/>'),
+  ask: svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.7M12 17h0"/>'),
+  down: svg('<path d="M12 5v14M6 13l6 6 6-6"/>'),
+  dot: svg('<circle cx="12" cy="12" r="3"/>'),
+};
+
+const state = {txns:[], docs:[], cfg:{}, offset:0, open:null, form:false, sigFeed:'', sigDrawer:'', sigDoc:'', uploadFor:null, seenDocs:null, uploading:0, me:null, started:false};
+
+function toast(text, bad){
+  const el = document.createElement('div');
+  el.className = 'toast' + (bad ? ' bad' : '');
+  el.textContent = text;
+  $('toasts').append(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+async function api(path, opts){
+  const r = await fetch(path, opts);
+  const body = await r.json().catch(() => ({}));
+  if(r.status === 401 && state.me) location.reload();
+  if(!r.ok) throw new Error(body.detail || `Request failed (${r.status})`);
+  return body;
+}
+const post = (path, data) => api(path, {method:'POST', headers:{'Content-Type':'application/json'}, body: data ? JSON.stringify(data) : undefined});
+
+function look(t){
+  switch(t.status){
+    case 'waiting_for_bill': return {tone:'amber', icon:ICON.clock, pill:'Waiting for bill'};
+    case 'calling': return {tone:'violet', icon:ICON.phone, pill:'Calling', pulse:true};
+    case 'explained_by_bill': return {tone:'green', icon:ICON.receipt, pill:'Explained by bill'};
+    case 'explained': return t.reason_source === 'typed'
+      ? {tone:'green', icon:ICON.pen, pill:'Explained by you'}
+      : {tone:'blue', icon:ICON.phone, pill:'Explained by call'};
+    case 'no_answer': return {tone:'red', icon:ICON.missed, pill:'No answer'};
+    case 'failed': return {tone:'red', icon:ICON.missed, pill:'Call failed'};
+    case 'unexplained': return {tone:'amber', icon:ICON.ask, pill:'Needs a reason'};
+    case 'small': return {tone:'', icon:ICON.dot, pill:`Under ${inr(state.cfg.call_threshold)}`};
+    default: return t.direction === 'credit'
+      ? {tone:'', icon:ICON.down, pill:'Credit'}
+      : {tone:'', icon:ICON.dot, pill:'Ignored'};
+  }
+}
+const pillHTML = l => `<span class="pill ${l.tone}">${l.pulse?'<i class="pulse"></i>':''}${esc(l.pill)}</span>`;
+
+function buttons(t){
+  const b = [];
+  if(t.status === 'waiting_for_bill') b.push(`<button class="btn sm primary" data-act="upload" data-id="${t.id}">Upload bill</button>`);
+  if(['waiting_for_bill','unexplained','no_answer','failed'].includes(t.status)){
+    const label = t.status === 'no_answer' || t.status === 'failed' ? 'Call again' : 'Call now';
+    b.push(`<button class="btn sm" data-act="call" data-id="${t.id}">${label}</button>`);
+    b.push(`<button class="btn sm" data-act="type" data-id="${t.id}">Type reason</button>`);
+    b.push(`<button class="btn sm ghost" data-act="ignore" data-id="${t.id}">Ignore</button>`);
+  }
+  return b.join('');
+}
+
+function subline(t){
+  if(t.status === 'waiting_for_bill') return `<span class="cd num" data-deadline="${t.bill_deadline}"></span>`;
+  if(t.status === 'calling') return `<span>${t.simulated ? 'Simulated call in progress' : 'Your phone should be ringing'}</span>`;
+  if(t.reason) return `<span class="why">${esc(t.reason)}</span>`;
+  if(t.status === 'failed' || t.status === 'no_answer') return `<span>${esc(t.failure_reason || '')}</span>`;
+  if(t.status === 'unexplained') return `<span>${esc(t.failure_reason || 'Too old to auto-call. Ask now or type why.')}</span>`;
+  return '';
+}
+
+function renderFeed(){
+  const sig = JSON.stringify(state.txns);
+  if(sig === state.sigFeed) return;
+  state.sigFeed = sig;
+  const live = state.txns.filter(t => t.status === 'waiting_for_bill').length;
+  $('feedCount').textContent = state.txns.length ? `${state.txns.length} total${live ? ` · ${live} on the clock` : ''}` : '';
+  if(!state.txns.length){
+    $('feed').innerHTML = `<div class="empty"><strong>Nothing to explain yet</strong>Fire a demo alert above, or make a transfer and let Gmail catch it.</div>`;
+    return;
+  }
+  $('feed').innerHTML = state.txns.map(t => {
+    const l = look(t), muted = ['ignored','small'].includes(t.status);
+    const bar = t.status === 'waiting_for_bill' ? `<div class="bar"><i data-bar="${t.bill_deadline}"></i></div>` : '';
+    const acts = buttons(t);
+    return `<article class="txn${t.status==='waiting_for_bill'?' urgent':''}${muted?' muted':''}" data-open="${t.id}" tabindex="0" aria-label="${esc(t.merchant)}, ${esc(inr(t.amount))}, ${esc(l.pill)}">
+      <div class="ico ${l.tone}">${l.icon}</div>
+      <div class="who">${esc(t.merchant)}</div>
+      <div class="amt num${t.direction==='credit'?' credit':''}">${t.direction==='credit'?'+':''}${inr(t.amount)}</div>
+      <div class="meta">${pillHTML(l)}${subline(t)}</div>
+      <div class="when">${esc(when(t.txn_at))}</div>
+      ${acts ? `<div class="actions">${acts}</div>` : ''}${bar}
+    </article>`;
+  }).join('');
+  tick();
+}
+
+function tick(){
+  const now = Date.now()/1000 + state.offset;
+  const reading = state.docs.some(d => d.status === 'processing');
+  document.querySelectorAll('[data-deadline]').forEach(el => {
+    const left = Math.ceil(+el.dataset.deadline - now);
+    if(left > 0){
+      el.textContent = `Upload bill or we'll call in ${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;
+    } else {
+      el.textContent = reading ? 'Reading your bill before calling…' : 'Time’s up. Calling…';
+    }
+  });
+  document.querySelectorAll('[data-bar]').forEach(el => {
+    const left = +el.dataset.bar - now;
+    el.style.width = Math.max(0, Math.min(100, 100*left/(state.cfg.bill_wait_seconds||120))) + '%';
+  });
+}
+
+async function renderStats(){
+  const s = await api('/api/stats');
+  $('stats').innerHTML = `
+    <div class="card stat"><div class="label">Total spent</div><div class="value num">${inr(s.total_spent)}</div><div class="hint">${s.count} debit${s.count===1?'':'s'} tracked</div></div>
+    <div class="card stat"><div class="label">Explained by bill</div><div class="value num">${inr(s.bill_amount)}</div><div class="hint">${s.bill_count} bill${s.bill_count===1?'':'s'}, no call needed</div></div>
+    <div class="card stat"><div class="label">Explained by call</div><div class="value num">${inr(s.call_amount)}</div><div class="hint">${s.call_count} call${s.call_count===1?'':'s'} answered</div></div>
+    <div class="card stat regret"><div class="label">Regretted</div><div class="value num">${inr(s.regret_amount)}</div>
+      <div class="hint">${s.judged_count ? `${s.regret_pct}% of ${s.judged_count} rated spend${s.judged_count===1?'':'s'}` : 'No spends rated yet'}</div>
+      <div class="meter"><i style="width:${s.regret_pct}%"></i></div></div>`;
+}
+
+function billHTML(d, compact){
+  if(d.status === 'processing') return `<div class="${compact?'':'card billcard'}"><div class="msg" style="margin:0"><i class="spin"></i>Reading ${esc(d.filename)} with Sarvam Document AI…</div></div>`;
+  if(d.status === 'failed') return `<div class="${compact?'':'card billcard'}"><div class="msg err" style="margin:0">${esc(d.message)}</div></div>`;
+  const items = d.items.length ? `<ul>${d.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>` : '';
+  return `<div class="card billcard">
+    <div><div class="eyebrow">Document AI read${d.simulated?'<span class="tag">Simulated</span>':''}</div><div class="merchant">${esc(d.merchant)}</div>${items}</div>
+    <div class="total num">${d.total_amount != null ? inr(d.total_amount) : '—'}</div>
+    <div class="msg ${d.txn_id?'ok':'no'}">${esc(d.message)}${d.bill_date?` · Dated ${esc(d.bill_date)}`:''}</div>
+  </div>`;
+}
+
+function renderDoc(){
+  const d = state.docs[0];
+  const sig = JSON.stringify(d || null) + state.uploading;
+  if(sig === state.sigDoc) return;
+  state.sigDoc = sig;
+  $('billSlot').innerHTML = d ? billHTML(d) : '';
+}
+
+function renderDrawer(){
+  const t = state.txns.find(x => x.id === state.open);
+  if(!t){ if(state.open) closeDrawer(); return; }
+  const doc = state.docs.find(d => d.id === t.document_id);
+  const sig = JSON.stringify([t, doc, state.form]);
+  if(sig === state.sigDrawer) return;
+  state.sigDrawer = sig;
+  const l = look(t);
+  const badges = [];
+  if(t.category) badges.push(`<span class="pill">${esc(t.category)}</span>`);
+  if(t.worth_it === 'yes') badges.push(`<span class="pill green">Worth it</span>`);
+  if(t.worth_it === 'no') badges.push(`<span class="pill red">Regretted</span>`);
+  const acts = buttons(t);
+  $('drawer').innerHTML = `
+    <div class="top">${pillHTML(l)}<button class="btn sm ghost" data-act="close" aria-label="Close details">Close</button></div>
+    <div class="big num">${t.direction==='credit'?'+':''}${inr(t.amount)}</div>
+    <div class="to">${esc(t.merchant)}</div>
+    <div style="color:var(--muted);font-size:13px">${esc(t.bank||'')} · ${esc(when(t.txn_at))}</div>
+    ${t.status==='waiting_for_bill'?`<div class="sect" style="color:var(--amber);font-size:14px"><span class="cd num" data-deadline="${t.bill_deadline}"></span></div>`:''}
+    ${acts && !state.form ? `<div class="actions" style="margin-top:14px">${acts}</div>` : ''}
+    ${state.form ? reasonForm() : ''}
+    ${t.reason ? `<div class="sect"><span class="eyebrow">Why</span><div class="reason">${esc(t.reason)}</div></div>` : ''}
+    ${badges.length ? `<div class="badges">${badges.join('')}</div>` : ''}
+    ${t.failure_reason && t.status!=='calling' ? `<div class="sect err">${esc(t.failure_reason)}</div>` : ''}
+    ${doc ? `<div class="sect"><span class="eyebrow">Extracted bill</span>${billHTML(doc)}</div>` : ''}
+    ${t.transcript.length ? `<div class="sect"><span class="eyebrow">Call transcript${t.simulated?'<span class="tag">Simulated</span>':''}</span><div class="bubbles">${t.transcript.map(m => `<div class="bubble ${m.role==='user'?'user':'agent'}">${esc(m.text)}</div>`).join('')}</div></div>` : ''}
+    <div class="sect"><span class="eyebrow">Raw alert</span><pre>${esc(t.raw_alert)}</pre></div>`;
+  tick();
+}
+
+function reasonForm(){
+  return `<form class="sect form" id="reasonForm">
+    <label class="field">What was it for?<textarea id="rText" required maxlength="500" placeholder="Dinner with the team"></textarea></label>
+    <div class="two">
+      <label class="field">Category<select id="rCat">${CATEGORIES.map(c => `<option>${esc(c)}</option>`).join('')}</select></label>
+      <label class="field">Worth it?<select id="rWorth"><option value="">Not sure</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+    </div>
+    <div class="console" style="padding:0"><div class="row"><button class="btn primary" type="submit">Save reason</button><button class="btn ghost" type="button" data-act="cancelform">Cancel</button></div></div>
+  </form>`;
+}
+
+function renderChips(){
+  const c = state.cfg, m = state.me, chips = [];
+  if(c.demo_mode) chips.push(`<span class="chip warn"><b></b>Demo mode: calls simulated</span>`);
+  else if(m.voice_missing.length) chips.push(`<span class="chip bad"><b></b>Voice not configured</span>`);
+  else chips.push(`<span class="chip ok"><b></b>Live calls to ••${esc((m.phone||'').slice(-4))}</span>`);
+  if(m.gmail_error) chips.push(`<span class="chip bad" title="${esc(m.gmail_error)}"><b></b>${m.gmail_error.startsWith('Reconnect') ? 'Gmail rejected: sign in again' : 'Gmail retrying'}</span>`);
+  else if(m.gmail_connected) chips.push(`<span class="chip ok"><b></b>Gmail ${m.gmail_last_sync ? 'checked every minute' : 'connecting'}</span>`);
+  else chips.push(`<span class="chip"><b></b>Gmail not connected</span>`);
+  if(!c.doc_ai_configured) chips.push(`<span class="chip warn"><b></b>Bills simulated</span>`);
+  $('chips').innerHTML = chips.join('');
+  const mins = (c.bill_wait_seconds||120)/60;
+  const wait = Number.isInteger(mins) ? `${mins} minute${mins===1?'':'s'}` : `${c.bill_wait_seconds} seconds`;
+  $('sub').textContent = `Show the bill within ${wait}, or your finance buddy calls to ask why.`;
+  $('thresholdNote').textContent = `Debits under ${inr(c.call_threshold)} are logged but never chased.`;
+}
+
+async function refresh(){
+  try{
+    const [tx, docs, me] = await Promise.all([api('/api/transactions'), api('/api/documents'), api('/api/me')]);
+    state.txns = tx.transactions; state.docs = docs; state.me = me;
+    state.offset = tx.now - Date.now()/1000;
+    if(state.seenDocs){
+      docs.forEach(d => {
+        if(d.status !== 'processing' && state.seenDocs[d.id] === 'processing' && d.txn_id) toast('Bill matched. Call cancelled.');
+      });
+    }
+    state.seenDocs = Object.fromEntries(docs.map(d => [d.id, d.status]));
+    renderChips(); renderDoc(); renderFeed(); renderDrawer();
+    await renderStats();
+  }catch(e){ console.warn(e); }
+}
+
+async function upload(file, txnId){
+  const fd = new FormData();
+  fd.append('file', file);
+  if(txnId) fd.append('txn_id', txnId);
+  try{
+    await api('/api/documents', {method:'POST', body:fd});
+    await refresh();
+  }catch(e){ toast(e.message, true); }
+}
+
+function openDrawer(id){
+  state.open = id; state.form = false; state.sigDrawer = '';
+  $('drawer').classList.add('on'); $('scrim').classList.add('on');
+  renderDrawer();
+  $('drawer').querySelector('button')?.focus();
+}
+function closeDrawer(){
+  state.open = null; state.form = false; state.sigDrawer = '';
+  $('drawer').classList.remove('on'); $('scrim').classList.remove('on');
+}
+
+async function act(name, id){
+  if(name === 'close') return closeDrawer();
+  if(name === 'logout'){ await post('/auth/logout'); location.href = '/'; return; }
+  if(name === 'deleteme'){
+    if(!confirm('Delete all your SpendWhy data, including your saved app password? This can\u2019t be undone.')) return;
+    await api('/api/me', {method:'DELETE'}); location.href = '/'; return;
+  }
+  if(name === 'cancelform'){ state.form = false; return renderDrawer(); }
+  if(name === 'upload'){ state.uploadFor = id; return $('file').click(); }
+  if(name === 'type'){
+    if(state.open !== id) openDrawer(id);
+    state.form = true; renderDrawer(); $('rText')?.focus();
+    return;
+  }
+  try{
+    if(name === 'call'){ await post(`/api/transactions/${id}/call`); toast(state.cfg.demo_mode ? 'Simulated call started' : 'Calling your phone…'); }
+    if(name === 'ignore'){ await post(`/api/transactions/${id}/ignore`); }
+    await refresh();
+  }catch(e){ toast(e.message, true); }
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]');
+  if(btn){ e.stopPropagation(); return act(btn.dataset.act, btn.dataset.id); }
+  const row = e.target.closest('[data-open]');
+  if(row) openDrawer(row.dataset.open);
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && state.open) closeDrawer();
+  if(e.key === 'Enter' && e.target.matches?.('[data-open]')) openDrawer(e.target.dataset.open);
+});
+document.addEventListener('submit', async e => {
+  if(e.target.id !== 'reasonForm') return;
+  e.preventDefault();
+  try{
+    await post(`/api/transactions/${state.open}/reason`, {reason:$('rText').value, category:$('rCat').value, worth_it:$('rWorth').value || null});
+    state.form = false;
+    await refresh();
+  }catch(err){ toast(err.message, true); }
+});
+$('scrim').onclick = closeDrawer;
+
+const drop = $('drop');
+drop.onclick = () => { state.uploadFor = null; $('file').click(); };
+['dragenter','dragover'].forEach(n => drop.addEventListener(n, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(n => drop.addEventListener(n, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if(f) upload(f, null); });
+$('file').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if(f) upload(f, state.uploadFor); };
+
+$('demoForm').onsubmit = async e => {
+  e.preventDefault();
+  try{
+    await post('/api/demo/alert', {amount:+$('demoAmt').value, merchant:$('demoMerchant').value});
+    await refresh();
+  }catch(err){ toast(err.message, true); }
+};
+$('syncBtn').onclick = async () => {
+  const b = $('syncBtn'); b.disabled = true; b.textContent = 'Syncing…';
+  try{
+    const r = await post('/api/sync');
+    toast(r.new ? `${r.new} new alert${r.new===1?'':'s'} from Gmail` : `Gmail checked, nothing new (${r.scanned} scanned)`);
+    await refresh();
+  }catch(err){ toast(err.message, true); }
+  b.disabled = false; b.textContent = 'Sync Gmail';
+};
+$('resetBtn').onclick = async () => {
+  if(!confirm('Clear your transactions and bills from the dashboard?')) return;
+  closeDrawer();
+  await post('/api/demo/reset');
+  await refresh();
+};
+
+function startApp(){
+  $('landing').hidden = true; $('app').hidden = false;
+  if(state.started) return;
+  state.started = true;
+  refresh();
+  setInterval(refresh, 2000);
+  setInterval(tick, 1000);
+}
+$('connectForm').onsubmit = async e => {
+  e.preventDefault();
+  const b = $('cSubmit'); b.disabled = true; b.textContent = 'Checking with Gmail…';
+  try{
+    state.me = await post('/api/connect', {name:$('cName').value, email:$('cEmail').value, phone:$('cPhone').value, app_password:$('cPass').value, consent:$('cConsent').checked});
+    $('cPass').value = '';
+    startApp();
+  }catch(err){ toast(err.message, true); }
+  b.disabled = false; b.textContent = 'Start tracking';
+};
+(async () => {
+  state.cfg = await api('/api/config');
+  if(state.cfg.demo_mode) $('cPass').placeholder = '16 letters (optional in demo mode)';
+  try{ state.me = await api('/api/me'); startApp(); }
+  catch(e){ $('landing').hidden = false; }
+})();
+</script>
+</body>
+</html>
