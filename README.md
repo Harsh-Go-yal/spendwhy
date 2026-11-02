@@ -22,7 +22,7 @@ Set `DEMO_MODE=false`, the Sarvam keys, and `PUBLIC_URL`. Host it on an always-o
 
 ## Vercel
 
-On Vercel the app runs as a demo only: no Gmail access, simulated calls and bills, and data that can reset at any time. Vercel doesn't keep background loops or a local database running, so real tracking needs an always-on server.
+On Vercel the app runs as a demo only: no Gmail access, simulated calls and bills, with the data kept in the visitor's browser. Vercel doesn't keep background loops or a shared local database running, so real tracking needs an always-on server.
 
 ## Sarvam agent setup
 

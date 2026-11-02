@@ -255,7 +255,113 @@ function toast(text, bad){
   setTimeout(() => el.remove(), 4500);
 }
 
+// On Vercel, requests land on separate instances that share no data, so the demo runs entirely in this browser.
+const DEMO_KEY = 'spendwhy_demo';
+const DEMO_ANSWERS = {
+  'Food & Dining': ['Team dinner after the hackathon sprint', 'yes', 'Took the team out for dinner after the sprint.'],
+  'Groceries': ['Weekly groceries for the flat', 'yes', 'Just the weekly groceries for the flat.'],
+  'Shopping': ['Impulse-bought sneakers in a sale', 'no', 'Honestly, I saw a sale and bought sneakers.'],
+  'Entertainment': ['Movie night with friends', 'yes', 'Movie tickets with friends.'],
+  'Transport': ['Cab to the airport', 'yes', 'Cab to the airport, I was running late.'],
+};
+const DEMO_WORDS = {
+  'Food & Dining': /coffee|tokai|chai|cafe|food|roll|pizza|burger|swiggy|zomato|restaurant|lunch|dinner/i,
+  'Groceries': /grocer|milk|blinkit|zepto|bigbasket|dmart|instamart/i,
+  'Shopping': /amazon|flipkart|myntra|ajio|shoes|shirt|mall|gift|croma/i,
+  'Transport': /uber|ola|rapido|metro|cab|taxi|petrol|irctc|flight|train/i,
+  'Entertainment': /movie|netflix|spotify|pvr|inox|bookmyshow/i,
+};
+const demoCategory = text => Object.keys(DEMO_WORDS).find(k => DEMO_WORDS[k].test(text || '')) || 'Other';
+const demoId = () => Math.random().toString(36).slice(2, 14);
+let demoData = {user:null, txns:[], docs:[]};
+try { demoData = JSON.parse(localStorage.getItem(DEMO_KEY)) || demoData; } catch(e) {}
+function demoSave(){ try { localStorage.setItem(DEMO_KEY, JSON.stringify(demoData)); } catch(e) {} }
+
+function demoFinishCall(t){
+  const first = (demoData.user.name || 'there').split(' ')[0];
+  const [reason, worth, spoken] = DEMO_ANSWERS[t.category] || ['Late-night online order I didn’t need', 'no', 'A late-night online order. I didn’t really need it.'];
+  Object.assign(t, {status:'explained', reason, reason_source:'call', worth_it:worth, category: DEMO_ANSWERS[t.category] ? t.category : 'Shopping', transcript:[
+    {role:'agent', text:`Hi ${first}! ₹${t.amount} went to ${t.merchant} and no bill has come in yet. What was it for?`},
+    {role:'user', text:spoken},
+    {role:'agent', text:'Got it, saved. Looking back, was it worth it?'},
+    {role:'user', text: worth === 'yes' ? 'Yes, totally worth it.' : 'No, I regret that one.'},
+    {role:'agent', text:'Thanks for telling me. Have a good one!'},
+  ]});
+}
+function demoStartCall(t, now){ Object.assign(t, {status:'calling', simulated:true, call_started_at:now, failure_reason:null}); }
+function demoTick(){
+  const now = Date.now()/1000;
+  demoData.txns.forEach(t => {
+    if(t.status === 'waiting_for_bill' && t.bill_deadline <= now) demoStartCall(t, now);
+    else if(t.status === 'calling' && now - t.call_started_at >= 5) demoFinishCall(t);
+  });
+  demoSave();
+}
+const demoMe = () => ({email:demoData.user.email, name:demoData.user.name, phone:null, gmail_connected:false, gmail_last_sync:null, gmail_error:null, api_token:'', voice_missing:[]});
+function demoStats(){
+  const rows = demoData.txns.filter(t => t.direction === 'debit' && t.status !== 'ignored');
+  const sum = list => list.reduce((n, t) => n + t.amount, 0);
+  const bill = rows.filter(t => t.status === 'explained_by_bill');
+  const call = rows.filter(t => t.status === 'explained' && t.reason_source === 'call');
+  const judged = rows.filter(t => t.worth_it);
+  const regret = sum(judged.filter(t => t.worth_it === 'no'));
+  return {total_spent:sum(rows), count:rows.length, bill_count:bill.length, bill_amount:sum(bill), call_count:call.length, call_amount:sum(call),
+    regret_amount:regret, regret_pct: judged.length ? Math.round(100*regret/sum(judged)) : 0, judged_count:judged.length};
+}
+async function demoUpload(form){
+  const hint = form.get('txn_id');
+  const doc = {id:demoId(), created_at:Date.now()/1000, filename:form.get('file')?.name || 'bill', status:'processing', items:[], simulated:true};
+  demoData.docs.unshift(doc);
+  await new Promise(r => setTimeout(r, 1500));
+  const waiting = demoData.txns.filter(t => t.status === 'waiting_for_bill');
+  const t = waiting.find(x => x.id === hint) || waiting[0];
+  Object.assign(doc, {status:'done', merchant: t ? t.merchant : 'Sharma Sweets', items:['Paneer roll','Masala chai'], total_amount: t ? t.amount : 450,
+    bill_date:new Date().toLocaleDateString('en-IN'), txn_id: t ? t.id : null,
+    message: t ? `Matched to ₹${t.amount} at ${t.merchant}. Call cancelled.` : 'Bill read: ₹450 at Sharma Sweets — no pending alert matched'});
+  if(t) Object.assign(t, {status:'explained_by_bill', reason:'Bill: Paneer roll, Masala chai', reason_source:'bill', category:'Food & Dining', document_id:doc.id});
+  demoSave();
+  return doc;
+}
+async function demoApi(path, opts = {}){
+  const method = opts.method || 'GET';
+  const body = typeof opts.body === 'string' ? JSON.parse(opts.body) : {};
+  const fail = message => { throw new Error(message); };
+  if(path === '/api/connect'){ demoData.user = {name:body.name.trim(), email:body.email.trim().toLowerCase()}; demoSave(); return demoMe(); }
+  if(path === '/auth/logout'){ demoData.user = null; demoSave(); return {ok:true}; }
+  if(!demoData.user) fail('Sign in first');
+  if(path === '/api/me' && method === 'DELETE'){ demoData = {user:null, txns:[], docs:[]}; demoSave(); return {ok:true}; }
+  demoTick();
+  if(path === '/api/me') return demoMe();
+  if(path === '/api/stats') return demoStats();
+  if(path === '/api/transactions') return {now:Date.now()/1000, transactions:demoData.txns};
+  if(path === '/api/documents') return method === 'POST' ? demoUpload(opts.body) : demoData.docs;
+  if(path === '/api/demo/reset'){ demoData.txns = []; demoData.docs = []; demoSave(); return {ok:true}; }
+  if(path === '/api/demo/alert'){
+    if(!(body.amount > 0)) fail('Amount must be more than 0');
+    const now = Date.now()/1000, merchant = (body.merchant || '').trim().slice(0, 40) || 'Unknown merchant';
+    const big = body.amount >= state.cfg.call_threshold;
+    const t = {id:demoId(), created_at:now, txn_at:now, amount:body.amount, direction:'debit', merchant, bank:'Demo Bank',
+      status: big ? 'waiting_for_bill' : 'small', bill_deadline: big ? now + state.cfg.bill_wait_seconds : null,
+      raw_alert:`INR ${body.amount.toFixed(2)} was debited from your A/c no. XX0000.\nTransaction Info: UPI/P2M/000000000000/${merchant}\n(Demo alert)`,
+      source:'demo', reason:null, reason_source:null, category:demoCategory(merchant), worth_it:null, failure_reason:null, transcript:[], simulated:false, document_id:null};
+    demoData.txns.unshift(t); demoSave();
+    return t;
+  }
+  const m = path.match(/^\/api\/transactions\/([^/]+)\/(call|reason|ignore)$/);
+  const t = m && demoData.txns.find(x => x.id === m[1]);
+  if(!t) fail('Transaction not found');
+  if(m[2] === 'call'){ if(!['waiting_for_bill','unexplained','no_answer','failed'].includes(t.status)) fail('This transaction can’t be called right now'); demoStartCall(t, Date.now()/1000); }
+  if(m[2] === 'ignore') t.status = 'ignored';
+  if(m[2] === 'reason'){
+    if(!(body.reason || '').trim()) fail('Reason can’t be empty');
+    Object.assign(t, {status:'explained', reason:body.reason.trim().slice(0, 500), reason_source:'typed', category:body.category || demoCategory(body.reason), worth_it:body.worth_it || null});
+  }
+  demoSave();
+  return t;
+}
+
 async function api(path, opts){
+  if(state.cfg.serverless && path !== '/api/config') return demoApi(path, opts);
   const r = await fetch(path, opts);
   const body = await r.json().catch(() => ({}));
   if(r.status === 401 && state.me) location.reload();
@@ -569,7 +675,7 @@ $('connectForm').onsubmit = async e => {
     $('cConsent').required = false; $('cConsent').closest('label').hidden = true;
     $('syncBtn').hidden = true;
     $('cSubmit').textContent = 'Try the demo';
-    document.querySelector('.gnote').textContent = 'Demo only: no Gmail access, and calls and bills are simulated. Your demo data can reset at any time.';
+    document.querySelector('.gnote').textContent = 'Demo only: no Gmail access, and calls and bills are simulated. Your demo data stays in this browser.';
   }
   try{ state.me = await api('/api/me'); startApp(); }
   catch(e){ $('landing').hidden = false; }
