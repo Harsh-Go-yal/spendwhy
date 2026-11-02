@@ -50,7 +50,10 @@ SARVAM_AGENT_PHONE = env("SARVAM_AGENT_PHONE")
 CALL_LANGUAGE = env("CALL_LANGUAGE")
 PUBLIC_URL = env("PUBLIC_URL").rstrip("/")
 WEBHOOK_SECRET = env("WEBHOOK_SECRET")
-DEMO_MODE = env("DEMO_MODE", "true").lower() in ("1", "true", "yes")
+# Vercel freezes the app between requests and wipes its disk, so background loops and saved accounts can't work.
+# There it runs as a demo only: no Gmail, no real calls, and the dashboard's polling moves the flow along.
+SERVERLESS = bool(env("VERCEL"))
+DEMO_MODE = SERVERLESS or env("DEMO_MODE", "true").lower() in ("1", "true", "yes")
 BILL_WAIT_SECONDS = int(env("BILL_WAIT_SECONDS", "120"))
 CALL_THRESHOLD = float(env("CALL_THRESHOLD", "100"))
 AUTO_POLL_SECONDS = int(env("AUTO_POLL_SECONDS", "60"))
@@ -62,7 +65,7 @@ MAX_CALLS_PER_DAY = int(env("MAX_CALLS_PER_DAY", "10"))
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 SESSION_DAYS = 30
 
-DATA_DIR = Path(env("DATA_DIR") or BASE)
+DATA_DIR = Path(env("DATA_DIR") or ("/tmp/spendwhy" if SERVERLESS else BASE))
 DB_PATH = DATA_DIR / "spendwhy.db"
 IST = timezone(timedelta(hours=5, minutes=30))
 SARVAM_DOC_BASE = "https://api.sarvam.ai/doc-ai/v1"
@@ -741,7 +744,8 @@ async def place_call(txn_id):
     t = get_txn(txn_id)
     if DEMO_MODE:
         update_txn(txn_id, attempt_id=f"demo-{txn_id}", simulated=1)
-        spawn(simulate_call(txn_id))
+        if not SERVERLESS:
+            spawn(simulate_call(txn_id))
         return True
     user = get_user(t["user_id"])
     blocked = call_blocker(user)
@@ -830,6 +834,10 @@ DEMO_ANSWERS = {
 
 async def simulate_call(txn_id):
     await asyncio.sleep(5)
+    finish_simulated_call(txn_id)
+
+
+def finish_simulated_call(txn_id):
     t = get_txn(txn_id)
     if not t or t["status"] != "calling":
         return
@@ -853,6 +861,18 @@ async def simulate_call(txn_id):
 
 
 # ---------- Background loops ----------
+
+
+async def serverless_tick():
+    """Does the deadline loop's job on each dashboard poll, since nothing runs between requests on Vercel."""
+    now = time.time()
+    for row in due_for_call(now)[0]:
+        await place_call(row["id"])
+    with db() as c:
+        done = c.execute("SELECT id FROM transactions WHERE status='calling' AND simulated=1 AND call_started_at<=?",
+                         (now - 5,)).fetchall()
+    for row in done:
+        finish_simulated_call(row["id"])
 
 
 def due_for_call(now):
@@ -917,12 +937,16 @@ async def gmail_loop():
 @asynccontextmanager
 async def lifespan(_app):
     init_db()
-    spawn(deadline_loop())
-    spawn(gmail_loop())
+    if not SERVERLESS:
+        spawn(deadline_loop())
+        spawn(gmail_loop())
     yield
     for task in list(_bg_tasks):
         task.cancel()
 
+
+if SERVERLESS:
+    init_db()  # a cold start may not run the lifespan before the first request
 
 app = FastAPI(title="SpendWhy", lifespan=lifespan)
 
@@ -933,7 +957,7 @@ app = FastAPI(title="SpendWhy", lifespan=lifespan)
 class ConnectIn(BaseModel):
     name: str
     email: str
-    phone: str
+    phone: str = ""
     app_password: str = ""
     consent: bool = False
 
@@ -946,9 +970,11 @@ async def connect(body: ConnectIn):
     phone = re.sub(r"[\s-]", "", body.phone)
     if not re.fullmatch(r"[^@\s]+@[^@\s]+", address):
         raise HTTPException(400, "Enter your Gmail address")
-    if not re.fullmatch(r"\+[1-9]\d{9,14}", phone):
+    if SERVERLESS and password:
+        raise HTTPException(400, "This demo doesn't take app passwords")
+    if not SERVERLESS and not re.fullmatch(r"\+[1-9]\d{9,14}", phone):
         raise HTTPException(400, "Enter the phone number with its country code, like +919876543210")
-    if not body.consent:
+    if not SERVERLESS and not body.consent:
         raise HTTPException(400, "SpendWhy can't call you until you agree to the calls")
     if password:
         try:
@@ -1014,6 +1040,7 @@ class ReasonIn(BaseModel):
 def config():
     return {
         "demo_mode": DEMO_MODE,
+        "serverless": SERVERLESS,
         "bill_wait_seconds": BILL_WAIT_SECONDS,
         "call_threshold": CALL_THRESHOLD,
         "poll_seconds": AUTO_POLL_SECONDS,
@@ -1040,7 +1067,9 @@ def delete_me(user=Depends(current_user)):
 
 
 @app.get("/api/transactions")
-def transactions(user=Depends(current_user)):
+async def transactions(user=Depends(current_user)):
+    if SERVERLESS:
+        await serverless_tick()
     with db() as c:
         rows = c.execute("SELECT * FROM transactions WHERE user_id=? ORDER BY created_at DESC LIMIT 200",
                          (user["id"],)).fetchall()
@@ -1182,8 +1211,8 @@ async def upload_document(
         c.execute("INSERT INTO documents (id, user_id, created_at, filename, status) VALUES (?,?,?,?,'processing')",
                   (doc_id, user["id"], time.time(), (file.filename or "bill")[:120]))
     task = spawn(process_document(user["id"], doc_id, data, txn_id))
-    if wait:
-        await task
+    if wait or SERVERLESS:
+        await task  # a frozen function would never finish it afterwards
     with db() as c:
         return doc_json(c.execute("SELECT * FROM documents WHERE id=?", (doc_id,)).fetchone())
 

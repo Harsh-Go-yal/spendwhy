@@ -20,6 +20,10 @@ Set `DEMO_MODE=false`, the Sarvam keys, and `PUBLIC_URL`. Host it on an always-o
 
 **This MVP is not hardened.** App passwords give full read access to a mailbox and are stored on the server, encrypted with a key on the same disk. Phone numbers aren't verified. Only share it with people who trust you, and use HTTPS.
 
+## Vercel
+
+On Vercel the app runs as a demo only: no Gmail access, simulated calls and bills, and data that can reset at any time. Vercel doesn't keep background loops or a local database running, so real tracking needs an always-on server.
+
 ## Sarvam agent setup
 
 **Input variables:** `user_name`, `amount`, `merchant`, `txn_time`

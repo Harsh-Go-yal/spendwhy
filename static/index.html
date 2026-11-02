@@ -559,11 +559,18 @@ $('connectForm').onsubmit = async e => {
     $('cPass').value = '';
     startApp();
   }catch(err){ toast(err.message, true); }
-  b.disabled = false; b.textContent = 'Start tracking';
+  b.disabled = false; b.textContent = state.cfg.serverless ? 'Try the demo' : 'Start tracking';
 };
 (async () => {
   state.cfg = await api('/api/config');
   if(state.cfg.demo_mode) $('cPass').placeholder = '16 letters (optional in demo mode)';
+  if(state.cfg.serverless){
+    ['cPass','cPhone'].forEach(id => { const el = $(id); el.required = false; el.closest('label').hidden = true; });
+    $('cConsent').required = false; $('cConsent').closest('label').hidden = true;
+    $('syncBtn').hidden = true;
+    $('cSubmit').textContent = 'Try the demo';
+    document.querySelector('.gnote').textContent = 'Demo only: no Gmail access, and calls and bills are simulated. Your demo data can reset at any time.';
+  }
   try{ state.me = await api('/api/me'); startApp(); }
   catch(e){ $('landing').hidden = false; }
 })();
